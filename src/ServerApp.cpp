@@ -58,13 +58,22 @@ void ServerApp::run() {
                         perror("Accept failed");
                         continue;
                     }
+
+
+                    
+                    char nameBuf[100] = {0};
+                    int nameLen = recv(clientSocket, nameBuf, sizeof(nameBuf), 0);
+                    std::string username = (nameLen > 0) ? std::string(nameBuf, nameLen) : "Client_" + std::to_string(clientSocket);
+
+                    clients[clientSocket] = username;
+
                     FD_SET(clientSocket, &masterSet);
                     if (clientSocket > maxFd) maxFd = clientSocket;
 
-                    clients[clientSocket] = "Client_" + std::to_string(clientSocket);
-                    std::cout << "New client connected: " << clients[clientSocket] << std::endl;
+                    std::cout << "New client connected: " << username << std::endl;
                 } else {
-   
+                    
+
                     char buffer[BUFFER_SIZE] = {0};
                     int bytesRead = read(fd, buffer, BUFFER_SIZE);
                     if (bytesRead <= 0) {
@@ -74,6 +83,41 @@ void ServerApp::run() {
                         clients.erase(fd);
                     } else {
                         std::string encryptedMessage(buffer, bytesRead);
+                        std::string decrypted = Encryptor::xorEncryptDecrypt(encryptedMessage, encryptionKey);
+
+                        
+                        if (decrypted.rfind("/kick ", 0) == 0) {
+                            std::string targetName = decrypted.substr(6);
+
+                            if (clients[fd] == "admin") {
+                                int targetFd = -1;
+                                for (const auto& [cfd, name] : clients) {
+                                    if (name == targetName) {
+                                        targetFd = cfd;
+                                        break;
+                                    }
+                                }
+
+                                if (targetFd != -1) {
+                                    std::string kickMsg = "You were kicked by admin.\n";
+                                    send(targetFd, kickMsg.c_str(), kickMsg.size(), 0);
+                                    close(targetFd);
+                                    FD_CLR(targetFd, &masterSet);
+                                    clients.erase(targetFd);
+                                    std::cout << "User " << targetName << " has been kicked.\n";
+                                } else {
+                                    std::string err = "User not found.\n";
+                                    send(fd, err.c_str(), err.size(), 0);
+                                }
+                            } else {
+                                std::string err = "You are not admin.\n";
+                                send(fd, err.c_str(), err.size(), 0);
+                            }
+
+                            continue; 
+                        }
+
+                        
                         encryptedHistory.push_back(encryptedMessage);
 
 
@@ -83,7 +127,8 @@ void ServerApp::run() {
                             }
                         }
 
-                        std::cout << "Encrypted message received from " << clients[fd] << ": " << encryptedMessage << std::endl;
+                        std::cout << "Encrypted message from " << clients[fd] << ": " << encryptedMessage << std::endl;
+
                     }
                 }
             }
@@ -97,4 +142,7 @@ ServerApp::~ServerApp() {
             close(fd);
         }
     }
+
+
 }
+

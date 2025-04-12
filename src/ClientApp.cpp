@@ -27,7 +27,11 @@ ClientApp::ClientApp(const std::string& name, const std::string& host, int port)
         exit(EXIT_FAILURE);
     }
 
+    send(sock, username.c_str(), username.size(), 0);
+
     std::cout << "Connected to server as " << username << std::endl;
+    std::cout << "Type your message or /kick <username> (if you're admin)\n";
+
 }
 
 void ClientApp::run() {
@@ -72,4 +76,8 @@ void ClientApp::run() {
 
 ClientApp::~ClientApp() {
     close(sock);
+
 }
+
+
+

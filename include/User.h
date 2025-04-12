@@ -18,6 +18,7 @@ public:
 
     virtual std::string getRole() const;
 
+
     bool operator==(const User& other) const;
 
     static int generateId();

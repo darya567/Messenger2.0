@@ -16,7 +16,7 @@ public:
 
     std::string decrypt(const std::string& key) const;
 
-    // Перегрузка оператора вывода
+
     friend std::ostream& operator<<(std::ostream& os, const Message& msg);
 };
 
